@@ -85,8 +85,10 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 footer{margin-top:24px;text-align:center;font-size:13px;color:var(--muted)}
 [hidden]{display:none!important}
 #postcodeLayer{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px}
-#postcodeBox{position:relative;width:100%;max-width:500px;height:min(560px,85vh);background:#fff;border-radius:12px;overflow:hidden}
-#postcodeClose{position:absolute;top:6px;right:6px;z-index:2;width:36px;height:36px;border:0;border-radius:8px;background:#fff;font-size:20px;cursor:pointer}
+#postcodeBox{width:100%;max-width:500px;height:min(600px,88vh);background:#fff;border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.pc-head{display:flex;align-items:center;justify-content:space-between;padding:8px 8px 8px 16px;border-bottom:1px solid #e5e5e5;color:#1f2a22;font-weight:700;font-size:15px}
+#postcodeClose{width:40px;height:40px;border:0;border-radius:8px;background:transparent;color:#1f2a22;font-size:24px;line-height:1;cursor:pointer}
+#postcodeEmbed{flex:1;min-height:0;position:relative}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -191,10 +193,14 @@ footer{margin-top:24px;text-align:center;font-size:13px;color:var(--muted)}
 </div>
 
 <div id="postcodeLayer" hidden>
-  <div id="postcodeBox"><button type="button" id="postcodeClose" aria-label="닫기">×</button></div>
+  <div id="postcodeBox" role="dialog" aria-label="도로명 주소 검색">
+    <div class="pc-head"><span>도로명 주소 검색</span><button type="button" id="postcodeClose" aria-label="닫기">×</button></div>
+    <div id="postcodeEmbed"></div>
+  </div>
 </div>
 
-<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script src="https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script>if(!(window.daum&&daum.Postcode))document.write('<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"><\/script>');</script>
 <script>
 /* ===== 여기만 수정하세요 ===== */
 const API_URL = "https://script.google.com/macros/s/AKfycbyULbm5JojwjbW8WFliV_BXAP9wOgXFZ9o-o9Zdq-LbJK2KQSmNiNZNvZNNpt7XDw4E/exec"; // Apps Script 웹 앱 URL
@@ -248,8 +254,11 @@ qty.addEventListener('input', () => { const n = parseInt(qty.value,10); if (n >=
 // 도로명 주소 검색 (카카오 우편번호 서비스)
 const layer = $('postcodeLayer');
 function openPostcode(){
-  if (!window.daum || !daum.Postcode) { showErr('address', '주소 검색을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'); return; }
+  if (!window.daum || !daum.Postcode) { showErr('address', '주소 검색을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.'); return; }
+  const box = $('postcodeEmbed');
+  box.textContent = '';               // 이전 검색창 제거 (중복 생성 방지)
   layer.hidden = false;
+  document.body.style.overflow = 'hidden';
   new daum.Postcode({
     oncomplete(data){
       let addr = data.roadAddress || data.address;
@@ -259,18 +268,20 @@ function openPostcode(){
       if (extra) addr += ' (' + extra + ')';
       $('zonecode').value = data.zonecode;
       $('address').value = addr;
-      layer.hidden = true;
+      closePostcode();
       showErr('address', '');
       $('addressDetail').focus();
     },
     width: '100%', height: '100%'
-  }).embed($('postcodeBox'));
+  }).embed(box, { autoClose: false });
 }
 $('searchAddr').onclick = openPostcode;
 $('zonecode').onclick = openPostcode;
 $('address').onclick = openPostcode;
-$('postcodeClose').onclick = () => { layer.hidden = true; };
-layer.addEventListener('click', e => { if (e.target === layer) layer.hidden = true; });
+function closePostcode(){ layer.hidden = true; document.body.style.overflow = ''; }
+$('postcodeClose').onclick = closePostcode;
+layer.addEventListener('click', e => { if (e.target === layer) closePostcode(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !layer.hidden) closePostcode(); });
 
 function showErr(key, msg){
   $('err-' + key).textContent = msg;
