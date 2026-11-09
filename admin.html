@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>김장 주문 관리</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{--bg:#f5f6f2;--card:#fff;--ink:#1f2a22;--muted:#6b756d;--line:#dfe3dc;--accent:#b8322a;--leaf:#3f6b45;--leaf-soft:#eaf1e7;--err:#c0392b;
+  --font:"Pretendard",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#151915;--card:#1e241f;--ink:#e9ede7;--muted:#9aa49b;--line:#323a33;--accent:#e0574d;--leaf:#8fbf8f;--leaf-soft:#243026;--err:#ff7b6e;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5}
+.wrap{max-width:1200px;margin:0 auto;padding:28px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
+h1{margin:0 0 4px;font-size:24px;font-weight:800}
+.sub{margin:0 0 20px;color:var(--muted)}
+.login{display:flex;gap:8px;flex-wrap:wrap;max-width:420px}
+input{flex:1;min-width:0;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 14px}
+.btn{font:inherit;font-weight:700;border:0;border-radius:10px;padding:11px 18px;cursor:pointer}
+.btn-dark{background:var(--ink);color:var(--card)}
+.btn-xl{background:var(--leaf);color:#fff}
+.btn-line{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.err{color:var(--err);font-size:14px;margin-top:8px}
+.stats{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0 16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 18px;min-width:140px}
+.stat span{display:block;font-size:13px;color:var(--muted)}
+.stat b{font-size:22px;font-variant-numeric:tabular-nums}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.bar input{max-width:280px}
+.tbl{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:900px;font-size:14px}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--leaf-soft);font-weight:700;white-space:nowrap;position:sticky;top:0}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.memo{max-width:280px;white-space:pre-wrap;word-break:break-all}
+tr:last-child td{border-bottom:0}
+[hidden]{display:none!important}
+.empty{padding:32px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>김장 주문 관리</h1>
+  <p class="sub">2026 김장 주문서 접수 내역</p>
+
+  <form id="loginForm" class="login">
+    <input id="key" type="password" placeholder="관리자 비밀번호" autocomplete="current-password">
+    <button class="btn btn-dark" type="submit">조회</button>
+  </form>
+  <div class="err" id="err"></div>
+
+  <section id="panel" hidden>
+    <div class="stats">
+      <div class="stat"><span>주문 건수</span><b id="sCount">0</b>건</div>
+      <div class="stat"><span>총 박스</span><b id="sBox">0</b>박스</div>
+      <div class="stat"><span>총 중량</span><b id="sKg">0</b>kg</div>
+      <div class="stat"><span>총 주문 금액</span><b id="sWon">0</b>원</div>
+    </div>
+    <div class="bar">
+      <input id="filter" placeholder="이름·연락처·주소 검색">
+      <button class="btn btn-xl" id="excel" type="button">엑셀 다운로드</button>
+      <button class="btn btn-line" id="refresh" type="button">새로고침</button>
+    </div>
+    <div class="tbl"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+// ▼ index.html 과 같은 Apps Script 웹 앱 URL
+const API_URL = "https://script.google.com/macros/s/AKfycbyULbm5JojwjbW8WFliV_BXAP9wOgXFZ9o-o9Zdq-LbJK2KQSmNiNZNvZNNpt7XDw4E/exec";
+const $ = id => document.getElementById(id);
+let headers = [], rows = [];
+
+async function load(){
+  $('err').textContent = '';
+  try {
+    const res = await fetch(API_URL + '?action=list&key=' + encodeURIComponent($('key').value));
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error);
+    headers = j.headers; rows = j.rows.reverse(); // 최신 주문이 위로
+    try { sessionStorage.setItem('kj-key', $('key').value); } catch(e){}
+    $('panel').hidden = false; render();
+  } catch (e) { $('err').textContent = e.message || '불러오지 못했습니다. URL과 비밀번호를 확인하세요.'; }
+}
+
+function filtered(){
+  const q = $('filter').value.trim().toLowerCase();
+  return q ? rows.filter(r => r.join(' ').toLowerCase().includes(q)) : rows;
+}
+function render(){
+  const list = filtered();
+  const qi = headers.indexOf('수량(박스)'), ki = headers.indexOf('총 중량(kg)'), wi0 = headers.indexOf('결제 금액(원)');
+  $('sCount').textContent = list.length;
+  $('sBox').textContent = list.reduce((a,r)=>a+(+r[qi]||0),0);
+  $('sKg').textContent = list.reduce((a,r)=>a+(+r[ki]||0),0).toLocaleString();
+  const wi = headers.indexOf('결제 금액(원)');
+  $('sWon').textContent = wi < 0 ? '-' : list.reduce((a,r)=>a+(+String(r[wi]).replace(/,/g,'')||0),0).toLocaleString();
+  const tr = document.createElement('tr');
+  headers.forEach(h => { const th = document.createElement('th'); th.textContent = h; tr.append(th); });
+  $('thead').replaceChildren(tr);
+  const tb = $('tbody'); tb.textContent = '';
+  if (!list.length) { const r = tb.insertRow(); const c = r.insertCell(); c.colSpan = headers.length; c.className='empty'; c.textContent = '접수된 주문이 없습니다.'; return; }
+  list.forEach(r => { const row = tb.insertRow(); r.forEach((v,i) => { const c = row.insertCell(); c.textContent = v; if (i===qi||i===ki||i===wi0) c.className='num'; if (headers[i]==='기타 문의사항') c.className='memo'; }); });
+}
+
+$('loginForm').addEventListener('submit', e => { e.preventDefault(); load(); });
+$('refresh').onclick = load;
+$('filter').oninput = render;
+$('excel').onclick = () => {
+  const qi = headers.indexOf('수량(박스)'), ki = headers.indexOf('총 중량(kg)'), wi = headers.indexOf('결제 금액(원)');
+  const data = [headers, ...filtered().map(r => r.map((v,i) => (i===qi||i===ki||i===wi) ? Number(String(v).replace(/,/g,'')) : v))];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = headers.map(h => ({ wch: {'접수일시':20,'주문번호':16,'도로명 주소':40,'상세주소':20,'기타 문의사항':40}[h] || 14 }));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '주문내역');
+  const d = new Date(); const stamp = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+  XLSX.writeFile(wb, `2026_김장주문_${stamp}.xlsx`);
+};
+try { const k = sessionStorage.getItem('kj-key'); if (k) { $('key').value = k; load(); } } catch(e){}
+</script>
+</body>
+</html>

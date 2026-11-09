@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>2026 김장 주문서</title>
+<meta name="description" content="2026 김장김치 주문서 · 20kg 단위 접수">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+/* Layout: single centered column, header band + form card, phone-first */
+:root{
+  --bg:#f5f6f2; --card:#ffffff; --ink:#1f2a22; --muted:#6b756d; --line:#dfe3dc;
+  --accent:#b8322a; --accent-ink:#ffffff; --leaf:#3f6b45; --leaf-soft:#eaf1e7; --err:#c0392b;
+  --font:"Pretendard",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#151915; --card:#1e241f; --ink:#e9ede7; --muted:#9aa49b; --line:#323a33;
+  --accent:#e0574d; --accent-ink:#ffffff; --leaf:#8fbf8f; --leaf-soft:#243026; --err:#ff7b6e; color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:560px;margin:0 auto;padding-block:32px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:grid;gap:8px;margin-bottom:24px}
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.08em;color:var(--leaf)}
+h1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.02em;text-wrap:balance}
+h1 em{font-style:normal;color:var(--accent)}
+.lead{margin:0;color:var(--muted);font-size:15px}
+.notice{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;padding:12px 14px;border-radius:10px;background:var(--leaf-soft);font-size:14px;color:var(--ink)}
+.notice b{color:var(--leaf)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 20px;display:grid;gap:22px}
+.section-t{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin:0 0 -8px;padding-top:4px;border-top:1px solid var(--line)}
+.section-t:first-child{border-top:0;padding-top:0}
+.field{display:grid;gap:8px}
+label,.lbl{font-size:15px;font-weight:600}
+.req{color:var(--accent);margin-left:2px}
+input,textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;outline:none;transition:border-color .15s,box-shadow .15s}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.8}
+input:focus,textarea:focus,select:focus{border-color:var(--leaf);box-shadow:0 0 0 3px color-mix(in srgb,var(--leaf) 22%,transparent)}
+input[readonly]{background:var(--bg);cursor:pointer}
+textarea{min-height:110px;resize:vertical}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) 50%,calc(100% - 14px) 50%;background-size:6px 6px;background-repeat:no-repeat;padding-right:36px}
+.price{display:grid;gap:6px;padding:14px 16px;border-radius:10px;background:var(--bg);font-size:15px;font-variant-numeric:tabular-nums}
+.price div{display:flex;justify-content:space-between;gap:12px}
+.price span{color:var(--muted)}
+.price-total{padding-top:8px;border-top:1px dashed var(--line)}
+.price-total span{color:var(--ink);font-weight:600}
+.price-total b{font-size:20px;color:var(--accent)}
+.bank{display:grid;gap:6px;padding:14px 16px;border:1px solid var(--line);border-radius:10px}
+.bank-l{font-size:13px;font-weight:600;color:var(--muted)}
+.bank-v{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.bank-v b{font-size:16px;word-break:keep-all}
+.copy{font:inherit;font-size:13px;font-weight:600;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.row{display:flex;gap:8px}
+.row input{flex:1;min-width:0}
+.btn{font:inherit;font-weight:700;border:0;border-radius:10px;cursor:pointer;transition:filter .15s,transform .05s}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible{outline:3px solid color-mix(in srgb,var(--leaf) 45%,transparent);outline-offset:2px}
+.btn-sub{padding:0 16px;background:var(--ink);color:var(--card);white-space:nowrap;font-size:15px}
+.btn-main{width:100%;padding:16px;background:var(--accent);color:var(--accent-ink);font-size:17px}
+.btn-main:hover{filter:brightness(1.06)}
+.btn-main:disabled{opacity:.6;cursor:wait}
+.qty{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.stepper button{width:48px;height:48px;font-size:22px;background:var(--bg);color:var(--ink);border:0;cursor:pointer}
+.stepper button:focus-visible{outline:2px solid var(--leaf);outline-offset:-2px}
+.stepper input{width:64px;border:0;border-radius:0;text-align:center;font-weight:700;font-size:18px;padding:0;height:48px;font-variant-numeric:tabular-nums}
+.stepper input:focus{box-shadow:none}
+.total{font-size:15px;color:var(--muted)}
+.total b{color:var(--ink);font-size:18px;font-variant-numeric:tabular-nums}
+.hint{font-size:13px;color:var(--muted)}
+.err{font-size:13px;color:var(--err);min-height:0}
+.err:empty{display:none}
+.invalid{border-color:var(--err)!important}
+.agree{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--muted);font-weight:400}
+.agree input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--leaf);flex:none}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.done{text-align:center;display:grid;gap:12px;justify-items:center;padding:40px 20px}
+.done .ok{width:56px;height:56px;border-radius:50%;background:var(--leaf-soft);color:var(--leaf);display:grid;place-items:center;font-size:28px;font-weight:800}
+.done h2{margin:0;font-size:22px}
+.done p{margin:0;color:var(--muted)}
+.summary{width:100%;text-align:left;border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:6px;font-size:14px}
+.summary div{display:flex;gap:12px}
+.summary dt{color:var(--muted);flex:0 0 72px}
+.summary dd{margin:0;min-width:0;word-break:keep-all;overflow-wrap:anywhere}
+footer{margin-top:24px;text-align:center;font-size:13px;color:var(--muted)}
+[hidden]{display:none!important}
+#postcodeLayer{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px}
+#postcodeBox{position:relative;width:100%;max-width:500px;height:min(560px,85vh);background:#fff;border-radius:12px;overflow:hidden}
+#postcodeClose{position:absolute;top:6px;right:6px;z-index:2;width:36px;height:36px;border:0;border-radius:8px;background:#fff;font-size:20px;cursor:pointer}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">2026 김장 사전 주문</div>
+    <h1>정성껏 담근 <em>김장김치</em> 주문서</h1>
+    <p class="lead">아래 내용을 작성해 주시면 확인 후 연락드리겠습니다.</p>
+    <div class="notice"><span><b>판매 단위</b> 20kg 1박스</span><span><b>가격</b> <span id="nPrice">-</span></span><span><b>결제</b> 계좌이체</span></div>
+  </header>
+
+  <form id="orderForm" class="card" novalidate>
+    <p class="section-t">주문자 정보</p>
+    <div class="field">
+      <label for="name">주문자 성명<span class="req">*</span></label>
+      <input id="name" name="name" autocomplete="name" placeholder="홍길동" maxlength="30">
+      <div class="err" id="err-name"></div>
+    </div>
+    <div class="field">
+      <label for="phone">연락처<span class="req">*</span></label>
+      <input id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="010-1234-5678" maxlength="13">
+      <div class="err" id="err-phone"></div>
+    </div>
+
+    <p class="section-t">배송지</p>
+    <div class="field">
+      <span class="lbl">주소<span class="req">*</span></span>
+      <div class="row">
+        <input id="zonecode" name="zonecode" placeholder="우편번호" readonly aria-label="우편번호">
+        <button type="button" class="btn btn-sub" id="searchAddr">주소 검색</button>
+      </div>
+      <input id="address" name="address" placeholder="도로명 주소 (주소 검색으로 선택)" readonly aria-label="도로명 주소">
+      <input id="addressDetail" name="addressDetail" placeholder="상세주소 (동·호수 등)" maxlength="100" aria-label="상세주소">
+      <div class="err" id="err-address"></div>
+    </div>
+
+    <p class="section-t">주문 내용</p>
+    <div class="field">
+      <span class="lbl">수량 (20kg 단위)<span class="req">*</span></span>
+      <div class="qty">
+        <div class="stepper">
+          <button type="button" id="minus" aria-label="수량 줄이기">−</button>
+          <input id="qty" name="qty" type="number" inputmode="numeric" min="1" max="50" value="1" aria-label="박스 수량">
+          <button type="button" id="plus" aria-label="수량 늘리기">+</button>
+        </div>
+        <span class="total">박스 · 총 <b id="totalKg">20</b>kg</span>
+      </div>
+      <div class="err" id="err-qty"></div>
+    </div>
+    <div class="price" id="priceBox">
+      <div><span>20kg × <b id="pQty">1</b>박스</span><span id="pUnit">-</span></div>
+      <div class="price-total"><span>결제 금액</span><b id="pTotal">-</b></div>
+    </div>
+    <div class="field">
+      <label for="delivery">출고일<span class="req">*</span></label>
+      <select id="delivery" name="delivery"><option value="">날짜를 선택하세요</option></select>
+      <div class="hint">출고 후 택배로 보내드리며, 지역에 따라 1~2일 정도 걸릴 수 있습니다.</div>
+      <div class="err" id="err-delivery"></div>
+    </div>
+
+    <p class="section-t">입금 정보</p>
+    <div class="field">
+      <label for="payer">입금자명<span class="req">*</span></label>
+      <input id="payer" name="payer" maxlength="30" placeholder="주문자와 다를 경우 입력">
+      <div class="hint">입금 확인을 위해 실제 입금하실 분의 이름을 적어주세요.</div>
+      <div class="err" id="err-payer"></div>
+    </div>
+    <div class="bank">
+      <span class="bank-l">입금 계좌</span>
+      <div class="bank-v"><b id="bankText">-</b><button type="button" class="copy" data-copy>계좌 복사</button></div>
+      <span class="hint" id="bankDue"></span>
+    </div>
+    <div class="field">
+      <label for="memo">기타 문의사항</label>
+      <textarea id="memo" name="memo" maxlength="1000" placeholder="맵기 정도, 배송 관련 요청사항 등을 적어주세요."></textarea>
+    </div>
+
+    <div class="hp" aria-hidden="true"><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
+
+    <label class="agree"><input type="checkbox" id="agree"> 주문 확인 및 배송을 위해 성명·연락처·주소를 수집하며, 김장 배송 완료 후 파기합니다. 이에 동의합니다.</label>
+    <div class="err" id="err-agree"></div>
+
+    <button type="submit" class="btn btn-main" id="submitBtn">주문 접수하기</button>
+    <div class="err" id="err-submit"></div>
+  </form>
+
+  <section id="done" class="card done" hidden>
+    <div class="ok">✓</div>
+    <h2>주문이 접수되었습니다</h2>
+    <p>아래 계좌로 입금해 주시면 확인 후 연락드리겠습니다.</p>
+    <dl class="summary" id="summary"></dl>
+    <div class="bank" style="width:100%;text-align:left">
+      <span class="bank-l">입금 계좌</span>
+      <div class="bank-v"><b id="bankText2">-</b><button type="button" class="copy" data-copy>계좌 복사</button></div>
+      <span class="hint" id="bankDue2"></span>
+    </div>
+    <button type="button" class="btn btn-sub" id="again" style="padding:12px 18px">새 주문 작성</button>
+  </section>
+
+  <footer>2026 김장 주문서</footer>
+</div>
+
+<div id="postcodeLayer" hidden>
+  <div id="postcodeBox"><button type="button" id="postcodeClose" aria-label="닫기">×</button></div>
+</div>
+
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script>
+/* ===== 여기만 수정하세요 ===== */
+const API_URL = "https://script.google.com/macros/s/AKfycbyULbm5JojwjbW8WFliV_BXAP9wOgXFZ9o-o9Zdq-LbJK2KQSmNiNZNvZNNpt7XDw4E/exec"; // Apps Script 웹 앱 URL
+const PRICE_PER_BOX = 210000;                               // 20kg 1박스 가격(원) — Code.gs와 같게
+const BANK = { bank: "카카오뱅크", account: "3333-09-8363517", holder: "" };   // holder: 예금주 이름(비워두면 표시 안 함)
+const PAY_DUE = "주문 후 3일 이내 입금";
+const DELIVERY_DATES = [                                    // 출고일 선택지 (여러 개면 고객이 선택)
+  "12월 1일 (화) 출고"
+];
+/* ============================ */
+const BOX_KG = 20;
+const won = n => n.toLocaleString('ko-KR') + '원';
+
+const $ = id => document.getElementById(id);
+const form = $('orderForm');
+
+// 연락처 자동 하이픈
+$('phone').addEventListener('input', e => {
+  let d = e.target.value.replace(/\D/g, '').slice(0, 11);
+  if (d.startsWith('02')) d = d.length > 9 ? d.replace(/(\d{2})(\d{4})(\d+)/, '$1-$2-$3') : d.replace(/(\d{2})(\d{3})(\d{0,4})/, '$1-$2-$3');
+  else d = d.length > 10 ? d.replace(/(\d{3})(\d{4})(\d+)/, '$1-$2-$3') : d.replace(/(\d{3})(\d{3})(\d{0,4})/, '$1-$2-$3');
+  e.target.value = d.replace(/-+$/, '');
+});
+
+// 수량
+const qty = $('qty');
+function updatePrice(n){ $('totalKg').textContent = n * BOX_KG; $('pQty').textContent = n; $('pTotal').textContent = won(n * PRICE_PER_BOX); }
+function setQty(n){ n = Math.max(1, Math.min(50, parseInt(n,10) || 1)); qty.value = n; updatePrice(n); }
+// 가격·계좌·배송일 초기화
+const bankStr = `${BANK.bank} ${BANK.account}` + (BANK.holder ? ` (${BANK.holder})` : "");
+$('nPrice').textContent = won(PRICE_PER_BOX);
+$('pUnit').textContent = won(PRICE_PER_BOX) + ' / 박스';
+['bankText','bankText2'].forEach(id => $(id).textContent = bankStr);
+['bankDue','bankDue2'].forEach(id => $(id).textContent = PAY_DUE);
+DELIVERY_DATES.forEach(d => $('delivery').add(new Option(d, d)));
+if (DELIVERY_DATES.length === 1) { $('delivery').selectedIndex = 1; $('delivery').options[0].remove(); }
+document.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => {
+  try { await navigator.clipboard.writeText(`${BANK.bank} ${BANK.account}`); b.textContent = '복사됨'; }
+  catch(e){ b.textContent = '길게 눌러 복사'; }
+  setTimeout(() => b.textContent = '계좌 복사', 1500);
+});
+// 입금자명 기본값 = 주문자 성명
+let payerTouched = false;
+$('payer').addEventListener('input', () => payerTouched = true);
+$('name').addEventListener('input', () => { if (!payerTouched) $('payer').value = $('name').value; });
+$('minus').onclick = () => setQty(+qty.value - 1);
+$('plus').onclick = () => setQty(+qty.value + 1);
+qty.addEventListener('change', () => setQty(qty.value));
+qty.addEventListener('input', () => { const n = parseInt(qty.value,10); if (n >= 1) updatePrice(Math.min(n,50)); });
+
+// 도로명 주소 검색 (카카오 우편번호 서비스)
+const layer = $('postcodeLayer');
+function openPostcode(){
+  if (!window.daum || !daum.Postcode) { showErr('address', '주소 검색을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'); return; }
+  layer.hidden = false;
+  new daum.Postcode({
+    oncomplete(data){
+      let addr = data.roadAddress || data.address;
+      let extra = '';
+      if (data.bname && /[동로가]$/.test(data.bname)) extra += data.bname;
+      if (data.buildingName && data.apartment === 'Y') extra += (extra ? ', ' : '') + data.buildingName;
+      if (extra) addr += ' (' + extra + ')';
+      $('zonecode').value = data.zonecode;
+      $('address').value = addr;
+      layer.hidden = true;
+      showErr('address', '');
+      $('addressDetail').focus();
+    },
+    width: '100%', height: '100%'
+  }).embed($('postcodeBox'));
+}
+$('searchAddr').onclick = openPostcode;
+$('zonecode').onclick = openPostcode;
+$('address').onclick = openPostcode;
+$('postcodeClose').onclick = () => { layer.hidden = true; };
+layer.addEventListener('click', e => { if (e.target === layer) layer.hidden = true; });
+
+function showErr(key, msg){
+  $('err-' + key).textContent = msg;
+  const map = { name:['name'], phone:['phone'], delivery:['delivery'], payer:['payer'], address:['address','addressDetail'], qty:['qty'] };
+  (map[key] || []).forEach(id => $(id).classList.toggle('invalid', !!msg && !(id==='addressDetail' && $('address').value)));
+}
+
+function validate(){
+  let ok = true;
+  const name = $('name').value.trim();
+  const phone = $('phone').value.trim();
+  showErr('name', name ? '' : '성명을 입력해 주세요.'); if (!name) ok = false;
+  const pOk = /^0\d{1,2}-?\d{3,4}-?\d{4}$/.test(phone);
+  showErr('phone', pOk ? '' : '연락처를 정확히 입력해 주세요. (예: 010-1234-5678)'); if (!pOk) ok = false;
+  if (!$('address').value) { showErr('address', '주소 검색으로 도로명 주소를 선택해 주세요.'); ok = false; }
+  else if (!$('addressDetail').value.trim()) { showErr('address', '상세주소를 입력해 주세요.'); $('addressDetail').classList.add('invalid'); ok = false; }
+  else { showErr('address', ''); $('addressDetail').classList.remove('invalid'); }
+  const q = parseInt(qty.value, 10);
+  showErr('qty', q >= 1 && q <= 50 ? '' : '수량은 1~50박스 사이로 입력해 주세요.'); if (!(q >= 1 && q <= 50)) ok = false;
+  const dv = $('delivery').value; showErr('delivery', dv ? '' : '출고일을 선택해 주세요.'); if (!dv) ok = false;
+  const py = $('payer').value.trim(); showErr('payer', py ? '' : '입금자명을 입력해 주세요.'); if (!py) ok = false;
+  $('err-agree').textContent = $('agree').checked ? '' : '개인정보 수집에 동의해 주세요.'; if (!$('agree').checked) ok = false;
+  return ok;
+}
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  $('err-submit').textContent = '';
+  if (!validate()) { const first = form.querySelector('.invalid') || $('agree'); first.focus(); return; }
+  const data = {
+    name: $('name').value.trim(), phone: $('phone').value.trim(),
+    zonecode: $('zonecode').value, address: $('address').value, addressDetail: $('addressDetail').value.trim(),
+    qty: parseInt(qty.value,10), delivery: $('delivery').value, payer: $('payer').value.trim(), memo: $('memo').value.trim(), website: $('website').value
+  };
+  const btn = $('submitBtn'); btn.disabled = true; btn.textContent = '접수 중…';
+  try {
+    const res = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(data) });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || '접수에 실패했습니다.');
+    showDone(data, json.orderNo, json.amount);
+  } catch (err) {
+    $('err-submit').textContent = (err.message && !/fetch|JSON|Unexpected/i.test(err.message)) ? err.message : '접수 중 문제가 생겼습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.';
+  } finally { btn.disabled = false; btn.textContent = '주문 접수하기'; }
+});
+
+function showDone(d, orderNo, amount){
+  const rows = [['주문번호', orderNo || '-'], ['성명', d.name], ['연락처', d.phone], ['주소', `(${d.zonecode}) ${d.address} ${d.addressDetail}`], ['수량', `${d.qty}박스 (${d.qty*BOX_KG}kg)`], ['출고일', d.delivery], ['입금자명', d.payer], ['결제 금액', won(amount || d.qty*PRICE_PER_BOX)]];
+  const s = $('summary'); s.textContent = '';
+  rows.forEach(([k,v]) => { const div = document.createElement('div'); const dt = document.createElement('dt'); const dd = document.createElement('dd'); dt.textContent = k; dd.textContent = v; div.append(dt, dd); s.append(div); });
+  form.hidden = true; $('done').hidden = false; window.scrollTo({top:0, behavior:'smooth'});
+}
+$('again').onclick = () => { form.reset(); payerTouched = false; setQty(1); $('zonecode').value=''; $('address').value=''; $('done').hidden = true; form.hidden = false; };
+</script>
+</body>
+</html>
