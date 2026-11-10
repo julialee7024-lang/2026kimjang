@@ -349,7 +349,7 @@ form.addEventListener('submit', async e => {
   const data = {
     name: $('name').value.trim(), phone: $('phone').value.trim(),
     zonecode: $('zonecode').value, address: $('address').value, addressDetail: $('addressDetail').value.trim(),
-    qty: totalQty(), items: { ...counts }, product: itemText(counts), delivery: $('delivery').value, payer: $('name').value.trim(), memo: $('memo').value.trim(), website: $('website').value
+    qty: totalQty(), items: { ...counts }, product: itemText(counts), delivery: $('delivery').value, payer: $('name').value.trim(), memo: (`[${itemText(counts)}] ` + $('memo').value.trim()).trim(), website: $('website').value
   };
   const btn = $('submitBtn'); btn.disabled = true; btn.textContent = '접수 중…';
   try {
