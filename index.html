@@ -60,6 +60,17 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 .btn-main:hover{filter:brightness(1.06)}
 .btn-main:disabled{opacity:.6;cursor:wait}
 .qty{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.items{display:grid;gap:10px}
+.item{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 12px 12px 16px;border:1px solid var(--line);border-radius:12px;transition:border-color .15s,background .15s}
+.item.on{border-color:var(--leaf);background:var(--leaf-soft)}
+.item-info{display:grid;gap:2px;min-width:0}
+.item-info b{font-size:17px}
+.item-info span{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.item .stepper{background:var(--card)}
+.warn{display:flex;gap:8px;padding:12px 14px;border-radius:10px;background:color-mix(in srgb,var(--accent) 10%,var(--card));color:var(--ink);font-size:14px;line-height:1.5}
+.warn b{color:var(--accent)}
+.contact{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 8px;font-size:14px;color:var(--muted)}
+.contact b{color:var(--ink);font-variant-numeric:tabular-nums;user-select:all}
 .stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .stepper button{width:48px;height:48px;font-size:22px;background:var(--bg);color:var(--ink);border:0;cursor:pointer}
 .stepper button:focus-visible{outline:2px solid var(--leaf);outline-offset:-2px}
@@ -98,7 +109,7 @@ footer{margin-top:24px;text-align:center;font-size:13px;color:var(--muted)}
     <div class="eyebrow">2026 김장 사전 주문</div>
     <h1>정성껏 담근 <em>김장김치</em> 주문서</h1>
     <p class="lead">아래 내용을 작성해 주시면 확인 후 연락드리겠습니다.</p>
-    <div class="notice"><span><b>판매 단위</b> 20kg 1박스</span><span><b>가격</b> <span id="nPrice">-</span></span><span><b>결제</b> 계좌이체</span></div>
+    <div class="notice"><span><b>품목</b> 배추김치 · 무우김치 (20kg 단위)</span><span><b>가격</b> <span id="nPrice">-</span></span><span><b>주문 문의</b> <span class="cName"></span> <span class="cPhone"></span></span></div>
   </header>
 
   <form id="orderForm" class="card" novalidate>
@@ -128,19 +139,14 @@ footer{margin-top:24px;text-align:center;font-size:13px;color:var(--muted)}
 
     <p class="section-t">주문 내용</p>
     <div class="field">
-      <span class="lbl">수량 (20kg 단위)<span class="req">*</span></span>
-      <div class="qty">
-        <div class="stepper">
-          <button type="button" id="minus" aria-label="수량 줄이기">−</button>
-          <input id="qty" name="qty" type="number" inputmode="numeric" min="1" max="50" value="1" aria-label="박스 수량">
-          <button type="button" id="plus" aria-label="수량 늘리기">+</button>
-        </div>
-        <span class="total">박스 · 총 <b id="totalKg">20</b>kg</span>
-      </div>
+      <span class="lbl">품목 및 수량<span class="req">*</span></span>
+      <div class="hint" style="margin-top:-4px">원하시는 김치의 박스 수를 선택하세요. 두 가지 함께 주문할 수 있습니다.</div>
+      <div class="items" id="items"></div>
+      <span class="total">총 <b id="totalBox">1</b>박스 · <b id="totalKg">20</b>kg</span>
       <div class="err" id="err-qty"></div>
     </div>
     <div class="price" id="priceBox">
-      <div><span>20kg × <b id="pQty">1</b>박스</span><span id="pUnit">-</span></div>
+      <div id="priceLines" style="display:grid;gap:6px"></div>
       <div class="price-total"><span>결제 금액</span><b id="pTotal">-</b></div>
     </div>
     <div class="field">
@@ -151,17 +157,12 @@ footer{margin-top:24px;text-align:center;font-size:13px;color:var(--muted)}
     </div>
 
     <p class="section-t">입금 정보</p>
-    <div class="field">
-      <label for="payer">입금자명<span class="req">*</span></label>
-      <input id="payer" name="payer" maxlength="30" placeholder="주문자와 다를 경우 입력">
-      <div class="hint">입금 확인을 위해 실제 입금하실 분의 이름을 적어주세요.</div>
-      <div class="err" id="err-payer"></div>
-    </div>
     <div class="bank">
       <span class="bank-l">입금 계좌</span>
       <div class="bank-v"><b id="bankText">-</b><button type="button" class="copy" data-copy>계좌 복사</button></div>
       <span class="hint" id="bankDue"></span>
     </div>
+    <div class="warn"><span>⚠</span><span><b>송금 시 반드시 주문자 성명과 동일한 이름으로 입금해 주세요.</b> 이름이 다르면 입금 확인이 늦어질 수 있습니다.</span></div>
     <div class="field">
       <label for="memo">기타 문의사항</label>
       <textarea id="memo" name="memo" maxlength="1000" placeholder="맵기 정도, 배송 관련 요청사항 등을 적어주세요."></textarea>
@@ -186,10 +187,12 @@ footer{margin-top:24px;text-align:center;font-size:13px;color:var(--muted)}
       <div class="bank-v"><b id="bankText2">-</b><button type="button" class="copy" data-copy>계좌 복사</button></div>
       <span class="hint" id="bankDue2"></span>
     </div>
+    <div class="warn" style="width:100%;text-align:left"><span>⚠</span><span><b>반드시 주문자 성명(<span id="payerName"></span>)으로 송금해 주세요.</b></span></div>
+    <div class="contact">주문 관련 문의 <b class="cPhone"></b> <span class="cName"></span></div>
     <button type="button" class="btn btn-sub" id="again" style="padding:12px 18px">새 주문 작성</button>
   </section>
 
-  <footer>2026 김장 주문서</footer>
+  <footer><div class="contact">주문 관련 문의 <b class="cPhone"></b> <span class="cName"></span></div></footer>
 </div>
 
 <div id="postcodeLayer" hidden>
@@ -204,8 +207,12 @@ footer{margin-top:24px;text-align:center;font-size:13px;color:var(--muted)}
 <script>
 /* ===== 여기만 수정하세요 ===== */
 const API_URL = "https://script.google.com/macros/s/AKfycbyULbm5JojwjbW8WFliV_BXAP9wOgXFZ9o-o9Zdq-LbJK2KQSmNiNZNvZNNpt7XDw4E/exec"; // Apps Script 웹 앱 URL
-const PRICE_PER_BOX = 210000;                               // 20kg 1박스 가격(원) — Code.gs와 같게
-const BANK = { bank: "카카오뱅크", account: "3333-09-8363517", holder: "" };   // holder: 예금주 이름(비워두면 표시 안 함)
+const PRODUCTS = [                                          // 품목 (가격은 Code.gs와 같게)
+  { id: "cabbage", name: "배추김치", price: 210000 },
+  { id: "radish",  name: "무우김치", price: 210000 }
+];
+const BANK = { bank: "농협", account: "517108-52-014945", holder: "김홍권" };   // holder: 예금주
+const CONTACT = { name: "김수경", phone: "010-8901-7034" };  // 주문 관련 문의
 const PAY_DUE = "주문 후 3일 이내 입금";
 const DELIVERY_DATES = [                                    // 출고일 선택지 (여러 개면 고객이 선택)
   "12월 1일 (화) 출고"
@@ -226,13 +233,48 @@ $('phone').addEventListener('input', e => {
 });
 
 // 수량
-const qty = $('qty');
-function updatePrice(n){ $('totalKg').textContent = n * BOX_KG; $('pQty').textContent = n; $('pTotal').textContent = won(n * PRICE_PER_BOX); }
-function setQty(n){ n = Math.max(1, Math.min(50, parseInt(n,10) || 1)); qty.value = n; updatePrice(n); }
+const counts = {};
+PRODUCTS.forEach((p, i) => {
+  counts[p.id] = i === 0 ? 1 : 0;
+  const row = document.createElement('div'); row.className = 'item'; row.id = 'item-' + p.id;
+  row.innerHTML = `<div class="item-info"><b></b><span></span></div>
+    <div class="stepper"><button type="button" aria-label="줄이기">−</button>
+    <input type="number" inputmode="numeric" min="0" max="50" id="qty-${p.id}"><button type="button" aria-label="늘리기">+</button></div>`;
+  row.querySelector('b').textContent = p.name;
+  row.querySelector('.item-info span').textContent = `20kg 1박스 · ${won(p.price)}`;
+  const [minus, plus] = row.querySelectorAll('button'); const inp = row.querySelector('input');
+  inp.setAttribute('aria-label', p.name + ' 박스 수');
+  minus.setAttribute('aria-label', p.name + ' 줄이기'); plus.setAttribute('aria-label', p.name + ' 늘리기');
+  minus.onclick = () => setCount(p.id, counts[p.id] - 1);
+  plus.onclick = () => setCount(p.id, counts[p.id] + 1);
+  inp.addEventListener('change', () => setCount(p.id, inp.value));
+  inp.addEventListener('input', () => { const n = parseInt(inp.value, 10); if (n >= 0) { counts[p.id] = Math.min(n, 50); updatePrice(false); } });
+  $('items').append(row);
+});
+function totalQty(){ return PRODUCTS.reduce((a, p) => a + counts[p.id], 0); }
+function totalAmount(){ return PRODUCTS.reduce((a, p) => a + counts[p.id] * p.price, 0); }
+function itemText(c){ return PRODUCTS.filter(p => c[p.id] > 0).map(p => `${p.name} ${c[p.id]}박스`).join(', '); }
+function setCount(id, n){ counts[id] = Math.max(0, Math.min(50, parseInt(n, 10) || 0)); updatePrice(true); }
+function updatePrice(syncInputs){
+  PRODUCTS.forEach(p => { if (syncInputs) $('qty-' + p.id).value = counts[p.id]; $('item-' + p.id).classList.toggle('on', counts[p.id] > 0); });
+  const t = totalQty();
+  $('totalBox').textContent = t; $('totalKg').textContent = t * BOX_KG;
+  const lines = $('priceLines'); lines.textContent = '';
+  PRODUCTS.filter(p => counts[p.id] > 0).forEach(p => {
+    const d = document.createElement('div'); const a = document.createElement('span'); const b = document.createElement('span');
+    a.textContent = `${p.name} 20kg × ${counts[p.id]}박스`; b.textContent = won(counts[p.id] * p.price); d.append(a, b); lines.append(d);
+  });
+  if (!lines.childNodes.length) { const d = document.createElement('div'); d.innerHTML = '<span>선택한 품목이 없습니다</span>'; lines.append(d); }
+  $('pTotal').textContent = won(totalAmount());
+  if (t > 0) showErr('qty', '');
+}
+function resetCounts(){ PRODUCTS.forEach((p, i) => counts[p.id] = i === 0 ? 1 : 0); updatePrice(true); }
+resetCounts();
 // 가격·계좌·배송일 초기화
 const bankStr = `${BANK.bank} ${BANK.account}` + (BANK.holder ? ` (${BANK.holder})` : "");
-$('nPrice').textContent = won(PRICE_PER_BOX);
-$('pUnit').textContent = won(PRICE_PER_BOX) + ' / 박스';
+$('nPrice').textContent = [...new Set(PRODUCTS.map(p => p.price))].length === 1 ? `20kg ${won(PRODUCTS[0].price)}` : PRODUCTS.map(p => `${p.name} ${won(p.price)}`).join(' / ');
+document.querySelectorAll('.cName').forEach(e => e.textContent = CONTACT.name);
+document.querySelectorAll('.cPhone').forEach(e => e.textContent = CONTACT.phone);
 ['bankText','bankText2'].forEach(id => $(id).textContent = bankStr);
 ['bankDue','bankDue2'].forEach(id => $(id).textContent = PAY_DUE);
 DELIVERY_DATES.forEach(d => $('delivery').add(new Option(d, d)));
@@ -243,13 +285,7 @@ document.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => {
   setTimeout(() => b.textContent = '계좌 복사', 1500);
 });
 // 입금자명 기본값 = 주문자 성명
-let payerTouched = false;
-$('payer').addEventListener('input', () => payerTouched = true);
-$('name').addEventListener('input', () => { if (!payerTouched) $('payer').value = $('name').value; });
-$('minus').onclick = () => setQty(+qty.value - 1);
-$('plus').onclick = () => setQty(+qty.value + 1);
-qty.addEventListener('change', () => setQty(qty.value));
-qty.addEventListener('input', () => { const n = parseInt(qty.value,10); if (n >= 1) updatePrice(Math.min(n,50)); });
+
 
 // 도로명 주소 검색 (카카오 우편번호 서비스)
 const layer = $('postcodeLayer');
@@ -285,7 +321,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !layer.hid
 
 function showErr(key, msg){
   $('err-' + key).textContent = msg;
-  const map = { name:['name'], phone:['phone'], delivery:['delivery'], payer:['payer'], address:['address','addressDetail'], qty:['qty'] };
+  const map = { name:['name'], phone:['phone'], delivery:['delivery'], address:['address','addressDetail'] };
   (map[key] || []).forEach(id => $(id).classList.toggle('invalid', !!msg && !(id==='addressDetail' && $('address').value)));
 }
 
@@ -299,10 +335,9 @@ function validate(){
   if (!$('address').value) { showErr('address', '주소 검색으로 도로명 주소를 선택해 주세요.'); ok = false; }
   else if (!$('addressDetail').value.trim()) { showErr('address', '상세주소를 입력해 주세요.'); $('addressDetail').classList.add('invalid'); ok = false; }
   else { showErr('address', ''); $('addressDetail').classList.remove('invalid'); }
-  const q = parseInt(qty.value, 10);
-  showErr('qty', q >= 1 && q <= 50 ? '' : '수량은 1~50박스 사이로 입력해 주세요.'); if (!(q >= 1 && q <= 50)) ok = false;
+  const q = totalQty();
+  showErr('qty', q >= 1 && q <= 50 ? '' : (q < 1 ? '품목을 1박스 이상 선택해 주세요.' : '한 번에 50박스까지 주문할 수 있습니다.')); if (!(q >= 1 && q <= 50)) ok = false;
   const dv = $('delivery').value; showErr('delivery', dv ? '' : '출고일을 선택해 주세요.'); if (!dv) ok = false;
-  const py = $('payer').value.trim(); showErr('payer', py ? '' : '입금자명을 입력해 주세요.'); if (!py) ok = false;
   $('err-agree').textContent = $('agree').checked ? '' : '개인정보 수집에 동의해 주세요.'; if (!$('agree').checked) ok = false;
   return ok;
 }
@@ -314,7 +349,7 @@ form.addEventListener('submit', async e => {
   const data = {
     name: $('name').value.trim(), phone: $('phone').value.trim(),
     zonecode: $('zonecode').value, address: $('address').value, addressDetail: $('addressDetail').value.trim(),
-    qty: parseInt(qty.value,10), delivery: $('delivery').value, payer: $('payer').value.trim(), memo: $('memo').value.trim(), website: $('website').value
+    qty: totalQty(), items: { ...counts }, product: itemText(counts), delivery: $('delivery').value, payer: $('name').value.trim(), memo: $('memo').value.trim(), website: $('website').value
   };
   const btn = $('submitBtn'); btn.disabled = true; btn.textContent = '접수 중…';
   try {
@@ -328,12 +363,13 @@ form.addEventListener('submit', async e => {
 });
 
 function showDone(d, orderNo, amount){
-  const rows = [['주문번호', orderNo || '-'], ['성명', d.name], ['연락처', d.phone], ['주소', `(${d.zonecode}) ${d.address} ${d.addressDetail}`], ['수량', `${d.qty}박스 (${d.qty*BOX_KG}kg)`], ['출고일', d.delivery], ['입금자명', d.payer], ['결제 금액', won(amount || d.qty*PRICE_PER_BOX)]];
+  const rows = [['주문번호', orderNo || '-'], ['성명', d.name], ['연락처', d.phone], ['주소', `(${d.zonecode}) ${d.address} ${d.addressDetail}`], ['품목', d.product], ['총 수량', `${d.qty}박스 (${d.qty*BOX_KG}kg)`], ['출고일', d.delivery], ['결제 금액', won(amount || PRODUCTS.reduce((a,p)=>a+(d.items[p.id]||0)*p.price,0))]];
+  $('payerName').textContent = d.name;
   const s = $('summary'); s.textContent = '';
   rows.forEach(([k,v]) => { const div = document.createElement('div'); const dt = document.createElement('dt'); const dd = document.createElement('dd'); dt.textContent = k; dd.textContent = v; div.append(dt, dd); s.append(div); });
   form.hidden = true; $('done').hidden = false; window.scrollTo({top:0, behavior:'smooth'});
 }
-$('again').onclick = () => { form.reset(); payerTouched = false; setQty(1); $('zonecode').value=''; $('address').value=''; $('done').hidden = true; form.hidden = false; };
+$('again').onclick = () => { form.reset(); resetCounts(); $('zonecode').value=''; $('address').value=''; $('done').hidden = true; form.hidden = false; };
 </script>
 </body>
 </html>

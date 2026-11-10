@@ -54,6 +54,8 @@ tr:last-child td{border-bottom:0}
     <div class="stats">
       <div class="stat"><span>주문 건수</span><b id="sCount">0</b>건</div>
       <div class="stat"><span>총 박스</span><b id="sBox">0</b>박스</div>
+      <div class="stat"><span>배추김치</span><b id="sCab">0</b>박스</div>
+      <div class="stat"><span>무우김치</span><b id="sRad">0</b>박스</div>
       <div class="stat"><span>총 중량</span><b id="sKg">0</b>kg</div>
       <div class="stat"><span>총 주문 금액</span><b id="sWon">0</b>원</div>
     </div>
@@ -96,13 +98,15 @@ function render(){
   $('sBox').textContent = list.reduce((a,r)=>a+(+r[qi]||0),0);
   $('sKg').textContent = list.reduce((a,r)=>a+(+r[ki]||0),0).toLocaleString();
   const wi = headers.indexOf('결제 금액(원)');
+  const sumCol = name => { const i = headers.indexOf(name); return i < 0 ? '-' : list.reduce((a,r)=>a+(+r[i]||0),0); };
+  $('sCab').textContent = sumCol('배추김치(박스)'); $('sRad').textContent = sumCol('무우김치(박스)');
   $('sWon').textContent = wi < 0 ? '-' : list.reduce((a,r)=>a+(+String(r[wi]).replace(/,/g,'')||0),0).toLocaleString();
   const tr = document.createElement('tr');
   headers.forEach(h => { const th = document.createElement('th'); th.textContent = h; tr.append(th); });
   $('thead').replaceChildren(tr);
   const tb = $('tbody'); tb.textContent = '';
   if (!list.length) { const r = tb.insertRow(); const c = r.insertCell(); c.colSpan = headers.length; c.className='empty'; c.textContent = '접수된 주문이 없습니다.'; return; }
-  list.forEach(r => { const row = tb.insertRow(); r.forEach((v,i) => { const c = row.insertCell(); c.textContent = v; if (i===qi||i===ki||i===wi0) c.className='num'; if (headers[i]==='기타 문의사항') c.className='memo'; }); });
+  list.forEach(r => { const row = tb.insertRow(); r.forEach((v,i) => { const c = row.insertCell(); c.textContent = v; if (i===qi||i===ki||i===wi0||/\(박스\)$/.test(headers[i])) c.className='num'; if (headers[i]==='기타 문의사항') c.className='memo'; }); });
 }
 
 $('loginForm').addEventListener('submit', e => { e.preventDefault(); load(); });
@@ -110,7 +114,7 @@ $('refresh').onclick = load;
 $('filter').oninput = render;
 $('excel').onclick = () => {
   const qi = headers.indexOf('수량(박스)'), ki = headers.indexOf('총 중량(kg)'), wi = headers.indexOf('결제 금액(원)');
-  const data = [headers, ...filtered().map(r => r.map((v,i) => (i===qi||i===ki||i===wi) ? Number(String(v).replace(/,/g,'')) : v))];
+  const data = [headers, ...filtered().map(r => r.map((v,i) => (i===qi||i===ki||i===wi||/\(박스\)$/.test(headers[i])) && v !== '' ? Number(String(v).replace(/,/g,'')) : v))];
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws['!cols'] = headers.map(h => ({ wch: {'접수일시':20,'주문번호':16,'도로명 주소':40,'상세주소':20,'기타 문의사항':40}[h] || 14 }));
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '주문내역');
