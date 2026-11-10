@@ -33,7 +33,8 @@ table{border-collapse:collapse;width:100%;min-width:900px;font-size:14px}
 th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 th{background:var(--leaf-soft);font-weight:700;white-space:nowrap;position:sticky;top:0}
 td.num{text-align:right;font-variant-numeric:tabular-nums}
-td.memo{max-width:280px;white-space:pre-wrap;word-break:break-all}
+td{white-space:nowrap}
+td.memo{min-width:200px;max-width:320px;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere}
 tr:last-child td{border-bottom:0}
 [hidden]{display:none!important}
 .empty{padding:32px;text-align:center;color:var(--muted)}
@@ -81,7 +82,7 @@ async function load(){
     const res = await fetch(API_URL + '?action=list&key=' + encodeURIComponent($('key').value));
     const j = await res.json();
     if (!j.ok) throw new Error(j.error);
-    headers = j.headers; rows = j.rows.reverse(); // 최신 주문이 위로
+    ({ headers, rows } = withProducts(j.headers, j.rows)); rows.reverse(); // 최신 주문이 위로
     try { sessionStorage.setItem('kj-key', $('key').value); } catch(e){}
     $('panel').hidden = false; render();
   } catch (e) { $('err').textContent = e.message || '불러오지 못했습니다. URL과 비밀번호를 확인하세요.'; }
@@ -91,6 +92,28 @@ function filtered(){
   const q = $('filter').value.trim().toLowerCase();
   return q ? rows.filter(r => r.join(' ').toLowerCase().includes(q)) : rows;
 }
+// 품목별 박스 칸 만들기: 문의사항 앞의 [배추김치 2박스, 무우김치 1박스] 를 읽어 칸으로 분리
+const PRODUCT_NAMES = ['배추김치', '무우김치'];
+function withProducts(h, rs){
+  if (PRODUCT_NAMES.every(n => h.includes(n + '(박스)'))) return { headers: h, rows: rs };
+  const qi = h.indexOf('수량(박스)'), mi = h.indexOf('기타 문의사항');
+  const newH = [...h]; newH.splice(qi + 1, 0, ...PRODUCT_NAMES.map(n => n + '(박스)'));
+  const newRows = rs.map(r => {
+    const memo = String(r[mi] || '');
+    const m = memo.match(/^\[([^\]]*)\]\s*/);
+    const counts = PRODUCT_NAMES.map(() => 0);
+    if (m) {
+      PRODUCT_NAMES.forEach((n, k) => { const x = m[1].match(new RegExp(n + '\\s*(\\d+)')); if (x) counts[k] = +x[1]; });
+    } else {
+      counts[0] = +r[qi] || 0;   // 품목 선택 기능 전 주문은 배추김치
+    }
+    const row = [...r]; row[mi] = m ? memo.slice(m[0].length) : memo;
+    row.splice(qi + 1, 0, ...counts);
+    return row;
+  });
+  return { headers: newH, rows: newRows };
+}
+
 function render(){
   const list = filtered();
   const qi = headers.indexOf('수량(박스)'), ki = headers.indexOf('총 중량(kg)'), wi0 = headers.indexOf('결제 금액(원)');
