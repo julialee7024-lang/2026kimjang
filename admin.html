@@ -36,6 +36,16 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 td{white-space:nowrap}
 td.memo{min-width:200px;max-width:320px;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere}
 tr:last-child td{border-bottom:0}
+tr.paid td{background:color-mix(in srgb,var(--leaf) 8%,transparent)}
+td.pay{text-align:center}
+th.pay{text-align:center}
+.pay label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;font-size:13px;color:var(--muted);padding:4px 8px;border-radius:8px}
+.pay input{width:20px;height:20px;margin:0;accent-color:var(--leaf);cursor:pointer;flex:none}
+.pay input:checked + span{color:var(--leaf)}
+.pay input:disabled{cursor:wait}
+select{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 14px}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--card);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px);z-index:10}
+.stat.warn b{color:var(--accent)}
 [hidden]{display:none!important}
 .empty{padding:32px;text-align:center;color:var(--muted)}
 </style>
@@ -59,15 +69,19 @@ tr:last-child td{border-bottom:0}
       <div class="stat"><span>무우김치</span><b id="sRad">0</b>박스</div>
       <div class="stat"><span>총 중량</span><b id="sKg">0</b>kg</div>
       <div class="stat"><span>총 주문 금액</span><b id="sWon">0</b>원</div>
+      <div class="stat"><span>입금 완료</span><b id="sPaid">0</b>건</div>
+      <div class="stat warn"><span>입금 대기</span><b id="sUnpaid">0</b>건 · <b id="sUnpaidWon" style="font-size:16px">0</b>원</div>
     </div>
     <div class="bar">
       <input id="filter" placeholder="이름·연락처·주소 검색">
+      <select id="payFilter" aria-label="입금 상태"><option value="">전체</option><option value="unpaid">입금 대기만</option><option value="paid">입금 완료만</option></select>
       <button class="btn btn-xl" id="excel" type="button">엑셀 다운로드</button>
       <button class="btn btn-line" id="refresh" type="button">새로고침</button>
     </div>
     <div class="tbl"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
   </section>
 </div>
+<div class="toast" id="toast" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
@@ -82,15 +96,41 @@ async function load(){
     const res = await fetch(API_URL + '?action=list&key=' + encodeURIComponent($('key').value));
     const j = await res.json();
     if (!j.ok) throw new Error(j.error);
-    ({ headers, rows } = withProducts(j.headers, j.rows)); rows.reverse(); // 최신 주문이 위로
+    ({ headers, rows } = paidFirst(withProducts(j.headers, j.rows))); rows.reverse(); // 최신 주문이 위로
     try { sessionStorage.setItem('kj-key', $('key').value); } catch(e){}
     $('panel').hidden = false; render();
   } catch (e) { $('err').textContent = e.message || '불러오지 못했습니다. URL과 비밀번호를 확인하세요.'; }
 }
 
+const PAID = '입금 확인';
+function paidFirst({ headers: h, rows: rs }){
+  let pi = h.indexOf(PAID);
+  if (pi < 0) { h = [...h, PAID]; rs = rs.map(r => [...r, '']); pi = h.length - 1; }
+  const move = a => [a[pi], ...a.slice(0, pi), ...a.slice(pi + 1)];
+  return { headers: move(h), rows: rs.map(move) };
+}
+const isPaid = r => String(r[0]).trim() !== '';
 function filtered(){
   const q = $('filter').value.trim().toLowerCase();
-  return q ? rows.filter(r => r.join(' ').toLowerCase().includes(q)) : rows;
+  const pf = $('payFilter').value;
+  return rows.filter(r => (!q || r.join(' ').toLowerCase().includes(q)) && (!pf || (pf === 'paid') === isPaid(r)));
+}
+let toastT;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3000); }
+async function setPaid(row, checked, input){
+  const ni = headers.indexOf('주문번호');
+  input.disabled = true;
+  try {
+    const url = `${API_URL}?action=paid&key=${encodeURIComponent($('key').value)}&orderNo=${encodeURIComponent(row[ni])}&value=${checked ? 1 : 0}`;
+    const j = await (await fetch(url)).json();
+    if (!j.ok) throw new Error(j.error);
+    if (!('paid' in j)) throw new Error('체크를 저장하려면 Apps Script의 doGet 부분을 새 코드로 바꿔야 합니다.');
+    row[0] = j.paid;
+    toast(`${row[headers.indexOf('주문자 성명')]}님 주문을 ${checked ? '입금 완료' : '입금 대기'}로 바꿨습니다.`);
+  } catch (e) {
+    input.checked = !checked;
+    toast(e.message || '저장하지 못했습니다. 다시 시도해 주세요.');
+  } finally { input.disabled = false; render(); }
 }
 // 품목별 박스 칸 만들기: 문의사항 앞의 [배추김치 2박스, 무우김치 1박스] 를 읽어 칸으로 분리
 const PRODUCT_NAMES = ['배추김치', '무우김치'];
@@ -123,18 +163,31 @@ function render(){
   const wi = headers.indexOf('결제 금액(원)');
   const sumCol = name => { const i = headers.indexOf(name); return i < 0 ? '-' : list.reduce((a,r)=>a+(+r[i]||0),0); };
   $('sCab').textContent = sumCol('배추김치(박스)'); $('sRad').textContent = sumCol('무우김치(박스)');
+  const unpaid = list.filter(r => !isPaid(r));
+  $('sPaid').textContent = list.length - unpaid.length; $('sUnpaid').textContent = unpaid.length;
+  $('sUnpaidWon').textContent = wi < 0 ? '-' : unpaid.reduce((a,r)=>a+(+String(r[wi]).replace(/,/g,'')||0),0).toLocaleString();
   $('sWon').textContent = wi < 0 ? '-' : list.reduce((a,r)=>a+(+String(r[wi]).replace(/,/g,'')||0),0).toLocaleString();
   const tr = document.createElement('tr');
-  headers.forEach(h => { const th = document.createElement('th'); th.textContent = h; tr.append(th); });
+  headers.forEach((h, i) => { const th = document.createElement('th'); th.textContent = h; if (i === 0) th.className = 'pay'; tr.append(th); });
   $('thead').replaceChildren(tr);
   const tb = $('tbody'); tb.textContent = '';
   if (!list.length) { const r = tb.insertRow(); const c = r.insertCell(); c.colSpan = headers.length; c.className='empty'; c.textContent = '접수된 주문이 없습니다.'; return; }
-  list.forEach(r => { const row = tb.insertRow(); r.forEach((v,i) => { const c = row.insertCell(); c.textContent = v; if (i===qi||i===ki||i===wi0||/\(박스\)$/.test(headers[i])) c.className='num'; if (headers[i]==='기타 문의사항') c.className='memo'; }); });
+  list.forEach(r => { const row = tb.insertRow(); if (isPaid(r)) row.className = 'paid'; r.forEach((v,i) => { const c = row.insertCell();
+    if (i === 0) {
+      c.className = 'pay';
+      const lb = document.createElement('label'); const cb = document.createElement('input'); const sp = document.createElement('span');
+      cb.type = 'checkbox'; cb.checked = isPaid(r); sp.textContent = isPaid(r) ? '입금 완료' : '대기';
+      cb.setAttribute('aria-label', `${r[headers.indexOf('주문자 성명')]} 입금 확인`);
+      cb.onchange = () => setPaid(r, cb.checked, cb);
+      lb.append(cb, sp); c.append(lb); return;
+    }
+    c.textContent = v; if (i===qi||i===ki||i===wi0||/\(박스\)$/.test(headers[i])) c.className='num'; if (headers[i]==='기타 문의사항') c.className='memo'; }); });
 }
 
 $('loginForm').addEventListener('submit', e => { e.preventDefault(); load(); });
 $('refresh').onclick = load;
 $('filter').oninput = render;
+$('payFilter').onchange = render;
 $('excel').onclick = () => {
   const qi = headers.indexOf('수량(박스)'), ki = headers.indexOf('총 중량(kg)'), wi = headers.indexOf('결제 금액(원)');
   const data = [headers, ...filtered().map(r => r.map((v,i) => (i===qi||i===ki||i===wi||/\(박스\)$/.test(headers[i])) && v !== '' ? Number(String(v).replace(/,/g,'')) : v))];
